@@ -1,0 +1,10 @@
+elasticsearch
+pandas
+numpy
+scikit-learn
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+aiofiles
+vaderSentiment
