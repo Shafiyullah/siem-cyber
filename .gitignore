@@ -9,3 +9,4 @@ venv/
 .idea/
 *.log
 test_logs.txt
+.agent
