@@ -17,8 +17,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy requirements and install
 COPY requirements.txt .
-# Update requirements.txt to REMOVE transformers, sentence-transformers, torch
-# And ADD vaderSentiment, aiofiles
 RUN pip install --no-cache-dir -r requirements.txt
 
 
@@ -45,5 +43,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
 # Run the API server.
-# This CMD runs main.py, which in turn runs uvicorn
 CMD ["python", "main.py"]
