@@ -4,17 +4,18 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.2.1
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
     ports:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
-  
+
   siem:
     build: .
     ports:
@@ -23,14 +24,14 @@ services:
       - ES_HOST=elasticsearch
       - ES_PORT=9200
       - LOG_SOURCES=/var/log/syslog,/var/log/auth.log
-      - API_KEY=${API_KEY} 
+      - API_KEY=${API_KEY}
     volumes:
       - /var/log:/var/log:ro
     depends_on:
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
