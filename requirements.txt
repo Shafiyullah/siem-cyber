@@ -8,3 +8,11 @@ python-dotenv
 pydantic
 aiofiles
 vaderSentiment
+pytest
+pytest-asyncio
+streamlit
+altair
+aiohttp
+mkdocs
+mkdocs-material
+mkdocs-include-markdown-plugin

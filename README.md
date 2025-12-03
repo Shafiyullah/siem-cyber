@@ -29,15 +29,14 @@ You can get the system up and running in just a few minutes using Docker.
 
 1.  **Clone the repository** (if you haven't already):
     ```bash
-    git clone https://github.com/YOUR_USERNAME/siem-cyber.git
-    cd siem-cyber
+    git clone https://github.com/Shafiyullah/siem-cyber.git
     ```
 
 2.  **Configure Environment**:
     Ensure you have a `.env` file. You can create one based on your needs, but the defaults in `config.py` handle most dev scenarios.
     ```bash
     # Example .env
-    API_KEY=my-secret-key
+    API_KEY=your-api-key
     ```
 
 3.  **Run with Docker**:
