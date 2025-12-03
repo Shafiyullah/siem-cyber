@@ -11,7 +11,10 @@ class ElasticsearchStorage:
         # Use passed-in values, which will come from Config via SIEMEngine
         host = Config.ES_HOST
         port = Config.ES_PORT
-        self.es = Elasticsearch([{'host': host, 'port': port, 'scheme': 'http'}]) # SECURITY NOTE: In production, use 'https' and add auth credentials
+        self.es = Elasticsearch(
+            [f"http://{host}:{port}"],
+            basic_auth=(Config.ES_USER, Config.ES_PASSWORD)
+        )
         self.index_name = "siem_logs"
         self._create_index()
 

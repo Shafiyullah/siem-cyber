@@ -10,6 +10,8 @@ class Config:
     # Elasticsearch
     ES_HOST = os.getenv('ES_HOST', 'localhost')
     ES_PORT = int(os.getenv('ES_PORT', 9200))
+    ES_USER = os.getenv('ES_USER', 'elastic')
+    ES_PASSWORD = os.getenv('ES_PASSWORD', 'changeme')
 
     # Log Sources
     _default_sources = '/var/log/syslog,/var/log/auth.log'
