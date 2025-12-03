@@ -48,8 +48,9 @@ async def startup_event():
 @app.post("/configure", dependencies=[Depends(get_api_key)])
 async def configure_sources(sources: LogSource):
     """Re-configure and initialize log sources (protected)"""
+    await siem_engine.stop_monitoring()
     await siem_engine.initialize(sources.sources)
-    # You may want to restart the monitoring task here
+    asyncio.create_task(siem_engine.start_monitoring())
     return {"status": "configured", "sources": sources.sources}
 
 

@@ -6,6 +6,7 @@ from log_collector import LogCollector
 from storage import ElasticsearchStorage
 from anomaly_detection import AnomalyDetector
 from llm_analysis import LLMAnalyzer
+from rule_engine import RuleEngine
 from config import Config
 import logging
 
@@ -17,9 +18,12 @@ class SIEMEngine:
         self.storage = ElasticsearchStorage()
         self.anomaly_detector = AnomalyDetector()
         self.llm_analyzer = LLMAnalyzer()
+        self.rule_engine = RuleEngine()
         self.collector = None
         self.alert_threshold = Config.ANOMALY_THRESHOLD  # Use Config
         self.training_days = Config.TRAINING_DAYS      # Use Config
+        self.monitoring_tasks = []
+        self.is_running = False
 
     async def initialize(self, log_sources: List[str]):
         """Initialize SIEM engine with log sources"""
@@ -59,7 +63,8 @@ class SIEMEngine:
         # We process logs one by one, but it's fast now
         analyzed_logs = []
         for log in logs:
-            ai_analysis = self.llm_analyzer.analyze_log_context(
+            # ASYNC CALL HERE
+            ai_analysis = await self.llm_analyzer.analyze_log_context(
                 log.get('message', log.get('raw_log', ''))
             )
             log['ai_analysis'] = ai_analysis
@@ -84,16 +89,24 @@ class SIEMEngine:
         # OPTIMIZATION: Store all logs in one bulk request
         self.storage.store_bulk_logs(analyzed_logs)
 
-        # Now, generate alerts for anomalous logs
+        # Now, generate alerts for anomalous logs AND rule violations
         for log in analyzed_logs:
+            # 1. Anomaly Detection Alerts
             if log.get('anomaly_score', 0) < self.alert_threshold:
                 await self.generate_alert(log)
+            
+            # 2. Rule Engine Alerts
+            rule_alerts = self.rule_engine.evaluate(log)
+            for alert in rule_alerts:
+                logging.warning(f"RULE ALERT: {json.dumps(alert)}")
+                # In production, store these alerts too or push to webhook
 
-    def _infer_severity(self, message: str) -> str:
+    async def _infer_severity(self, message: str) -> str:
         """Heuristic severity inference - This is now handled by LLMAnalyzer"""
         # We can keep this as a fallback if needed, but llm_analysis.py
         # is the primary source now.
-        return self.llm_analyzer.analyze_log_context(message)['severity']
+        analysis = await self.llm_analyzer.analyze_log_context(message)
+        return analysis['severity']
 
     async def generate_alert(self, log: Dict[str, Any]):
         """Generate security alert for anomalous log"""
@@ -126,22 +139,42 @@ class SIEMEngine:
 
     async def start_monitoring(self):
         """Start continuous log monitoring FOR REAL"""
+        if self.is_running:
+            logging.warning("Monitoring already running. Stopping first...")
+            await self.stop_monitoring()
+
         logging.info("Starting SIEM monitoring...")
         if not self.collector:
             logging.error("Collector not initialized. Call initialize() first.")
             return
 
+        self.is_running = True
         # Create a list of monitoring tasks, one for each log source
-        tasks = [
+        self.monitoring_tasks = [
             asyncio.create_task(self.run_collector(source))
             for source in self.collector.log_sources
         ]
         
-        if tasks:
-            logging.info(f"Monitoring {len(tasks)} log sources...")
-            await asyncio.gather(*tasks) # Run all monitoring tasks concurrently
+        if self.monitoring_tasks:
+            logging.info(f"Monitoring {len(self.monitoring_tasks)} log sources...")
+            try:
+                await asyncio.gather(*self.monitoring_tasks) # Run all monitoring tasks concurrently
+            except asyncio.CancelledError:
+                logging.info("Monitoring tasks cancelled.")
         else:
             logging.warning("No log sources configured to monitor.")
+
+    async def stop_monitoring(self):
+        """Stop all monitoring tasks"""
+        logging.info("Stopping SIEM monitoring...")
+        self.is_running = False
+        for task in self.monitoring_tasks:
+            task.cancel()
+        
+        if self.monitoring_tasks:
+            await asyncio.gather(*self.monitoring_tasks, return_exceptions=True)
+        self.monitoring_tasks = []
+        logging.info("SIEM monitoring stopped.")
 
     async def run_collector(self, source: str):
         """Helper function to run a single collector and batch its logs"""
