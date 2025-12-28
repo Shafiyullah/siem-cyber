@@ -27,10 +27,13 @@ class SIEMEngine:
 
     async def initialize(self, log_sources: List[str]):
         """Initialize SIEM engine with log sources"""
+        # Initialize async storage
+        await self.storage.initialize()
+        
         self.collector = LogCollector(log_sources, self.storage)
 
         # Load historical logs for anomaly detection training
-        historical_logs = self.load_historical_logs(days_back=self.training_days)
+        historical_logs = await self.load_historical_logs(days_back=self.training_days)
         if historical_logs:
             try:
                 self.anomaly_detector.fit(historical_logs)
@@ -40,7 +43,7 @@ class SIEMEngine:
         else:
             logging.warning("No historical logs found for training. Anomaly detector is not fitted.")
 
-    def load_historical_logs(self, days_back: int = 7) -> List[Dict[str, Any]]:
+    async def load_historical_logs(self, days_back: int = 7) -> List[Dict[str, Any]]:
         """Load historical logs for training"""
         query = {
             "query": {
@@ -52,24 +55,26 @@ class SIEMEngine:
                 }
             }
         }
-        return self.storage.search_logs(query, size=10000)
+        return await self.storage.search_logs(query, size=10000)
 
     async def process_log_batch(self, logs: List[Dict[str, Any]]):
         """Process a batch of logs through analysis pipeline"""
         if not logs:
             return
 
-        # Step 1: LLM Analysis (Now lightweight)
-        # We process logs one by one, but it's fast now
-        analyzed_logs = []
-        for log in logs:
-            # ASYNC CALL HERE
+        # Step 1: LLM Analysis (Parallelized)
+        
+        # Helper to analyze a single log
+        async def analyze_single_log(log_item):
             ai_analysis = await self.llm_analyzer.analyze_log_context(
-                log.get('message', log.get('raw_log', ''))
+                log_item.get('message', log_item.get('raw_log', ''))
             )
-            log['ai_analysis'] = ai_analysis
-            log['severity'] = ai_analysis.get('severity', 'unknown')
-            analyzed_logs.append(log)
+            log_item['ai_analysis'] = ai_analysis
+            log_item['severity'] = ai_analysis.get('severity', 'unknown')
+            return log_item
+
+        # Run all analyses concurrently
+        analyzed_logs = await asyncio.gather(*[analyze_single_log(log) for log in logs])
 
         # Step 2: Anomaly Detection
         if self.anomaly_detector.is_fitted:
@@ -86,8 +91,9 @@ class SIEMEngine:
                 log['anomaly_score'] = 0.0 # Default score if not fitted
 
         # Step 3: Store and Alert
-        # OPTIMIZATION: Store all logs in one bulk request
-        self.storage.store_bulk_logs(analyzed_logs)
+        
+        # Store all logs in one bulk request
+        await self.storage.store_bulk_logs(analyzed_logs)
 
         # Now, generate alerts for anomalous logs AND rule violations
         for log in analyzed_logs:
