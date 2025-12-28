@@ -85,7 +85,7 @@ async def get_alerts(
         
     query_body["query"]["bool"]["must"].append({"range": {"timestamp": {"gte": time_filter}}})
 
-    alerts = siem_engine.storage.search_logs(query_body, size=100)
+    alerts = await siem_engine.storage.search_logs(query_body, size=100)
     return {"alerts": alerts}
 
 
@@ -101,12 +101,12 @@ async def search_logs(query: str, size: int = 50):
         },
         "sort": [{"timestamp": {"order": "desc"}}]
     }
-    logs = siem_engine.storage.search_logs(es_query, size=size)
+    logs = await siem_engine.storage.search_logs(es_query, size=size)
     return {"logs": logs}
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint (unprotected)"""
-    es_healthy = siem_engine.storage.is_connected()
+    es_healthy = await siem_engine.storage.is_connected()
     return {"status": "healthy", "engine_running": True, "elasticsearch_connected": es_healthy}
