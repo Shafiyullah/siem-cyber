@@ -10,3 +10,7 @@ venv/
 *.log
 test_logs.txt
 .agent
+
+# Testing & Docs
+.pytest_cache/
+site/
