@@ -29,7 +29,9 @@ class LLMAnalyzer:
         """Analyze log message using the configured provider"""
         
         # 1. Fast Heuristics (Always run this for basic severity/sentiment)
-        base_analysis = self._heuristic_analysis(log_message)
+        # Offload CPU-bound task to thread
+        import asyncio
+        base_analysis = await asyncio.to_thread(self._heuristic_analysis, log_message)
         
         # 2. Advanced LLM Analysis (Optional, if configured)
         llm_analysis = {}
