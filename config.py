@@ -12,6 +12,7 @@ class Config:
     ES_PORT = int(os.getenv('ES_PORT', 9200))
     ES_USER = os.getenv('ES_USER', 'elastic')
     ES_PASSWORD = os.getenv('ES_PASSWORD', 'changeme')
+    ES_INDEX_NAME = os.getenv('ES_INDEX_NAME', 'siem_logs')
 
     # Log Sources
     _default_sources = '/var/log/syslog,/var/log/auth.log'
