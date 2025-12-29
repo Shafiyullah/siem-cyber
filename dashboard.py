@@ -79,23 +79,29 @@ def get_recent_alerts(limit=50):
         "sort": [{"timestamp": {"order": "desc"}}],
         "size": limit
     }
-    res = es.search(index="siem_logs", body=query)
-    return [hit['_source'] for hit in res['hits']['hits']]
+    try:
+        res = es.search(index=Config.ES_INDEX_NAME, body=query)
+        return [hit['_source'] for hit in res['hits']['hits']]
+    except Exception:
+        return []
 
 def get_stats():
     if not es: return 0, 0, 0
-    # Total Logs
-    total_logs = es.count(index="siem_logs")['count']
-    
-    # High Severity Alerts
-    high_sev_query = {"query": {"term": {"severity.keyword": "high"}}}
-    high_sev = es.count(index="siem_logs", body=high_sev_query)['count']
-    
-    # Critical Severity Alerts
-    crit_sev_query = {"query": {"term": {"severity.keyword": "critical"}}}
-    crit_sev = es.count(index="siem_logs", body=crit_sev_query)['count']
-    
-    return total_logs, high_sev, crit_sev
+    try:
+        # Total Logs
+        total_logs = es.count(index=Config.ES_INDEX_NAME)['count']
+        
+        # High Severity Alerts
+        high_sev_query = {"query": {"term": {"severity.keyword": "high"}}}
+        high_sev = es.count(index=Config.ES_INDEX_NAME, body=high_sev_query)['count']
+        
+        # Critical Severity Alerts
+        crit_sev_query = {"query": {"term": {"severity.keyword": "critical"}}}
+        crit_sev = es.count(index=Config.ES_INDEX_NAME, body=crit_sev_query)['count']
+        
+        return total_logs, high_sev, crit_sev
+    except Exception:
+        return 0, 0, 0
 
 # --- Dashboard Layout ---
 
@@ -215,6 +221,6 @@ with tab3:
                 },
                 "size": 20
             }
-            res = es.search(index="siem_logs", body=query)
+            res = es.search(index=Config.ES_INDEX_NAME, body=query)
             hits = [hit['_source'] for hit in res['hits']['hits']]
             st.dataframe(hits)
