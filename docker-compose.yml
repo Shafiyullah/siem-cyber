@@ -23,6 +23,9 @@ services:
     environment:
       - ES_HOST=elasticsearch
       - ES_PORT=9200
+      - ES_USER=elastic
+      - ES_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+      - ES_INDEX_NAME=${ES_INDEX_NAME:-siem_logs}
       - LOG_SOURCES=/var/log/syslog,/var/log/auth.log
       - API_KEY=${API_KEY}
     volumes:
