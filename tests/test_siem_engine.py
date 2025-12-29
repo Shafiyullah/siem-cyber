@@ -8,16 +8,27 @@ async def test_initialize():
     with patch('siem_engine.ElasticsearchStorage') as MockStorage, \
          patch('siem_engine.LogCollector') as MockCollector:
         
+        # Setup async mocks for storage
+        mock_storage_instance = MockStorage.return_value
+        mock_storage_instance.initialize = AsyncMock()
+        mock_storage_instance.search_logs = AsyncMock(return_value=[]) # Return empty list for historical logs
+        
         engine = SIEMEngine()
         await engine.initialize(['test.log'])
         
         assert engine.collector is not None
         assert engine.storage is not None
+        mock_storage_instance.initialize.assert_awaited_once()
 
 @pytest.mark.asyncio
 async def test_start_stop_monitoring():
-    with patch('siem_engine.ElasticsearchStorage'), \
+    with patch('siem_engine.ElasticsearchStorage') as MockStorage, \
          patch('siem_engine.LogCollector') as MockCollector:
+        
+        mock_storage_instance = MockStorage.return_value
+        mock_storage_instance.initialize = AsyncMock()
+        mock_storage_instance.search_logs = AsyncMock(return_value=[])
+        mock_storage_instance.store_bulk_logs = AsyncMock()
         
         # Setup mock collector to return an async iterator
         mock_collector_instance = MockCollector.return_value
@@ -49,9 +60,14 @@ async def test_start_stop_monitoring():
 
 @pytest.mark.asyncio
 async def test_reconfiguration():
-    with patch('siem_engine.ElasticsearchStorage'), \
+    with patch('siem_engine.ElasticsearchStorage') as MockStorage, \
          patch('siem_engine.LogCollector') as MockCollector:
          
+        mock_storage_instance = MockStorage.return_value
+        mock_storage_instance.initialize = AsyncMock()
+        mock_storage_instance.search_logs = AsyncMock(return_value=[])
+        mock_storage_instance.store_bulk_logs = AsyncMock()
+
         mock_collector_instance = MockCollector.return_value
         mock_collector_instance.log_sources = ['test.log']
         mock_collector_instance.collect_from_file.return_value = AsyncMock() # Dummy
